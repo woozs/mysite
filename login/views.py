@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.shortcuts import redirect
 from django.conf import settings
+from django.utils.timezone import utc
 from . import models
 from . import forms
 
@@ -61,12 +62,9 @@ def login(request):
         if login_form.is_valid():
             username = login_form.cleaned_data.get('username')
             password = login_form.cleaned_data.get('password')
-            print(username,password)
-            print(models.User.objects)
+
             try:
                 user = models.User.objects.get(name=username)
-                print(user)
-
             except:
                 message = "用户不存在！"
                 return render(request, 'login/login.html', locals())
@@ -137,22 +135,21 @@ def logout(request):
         return  redirect(request,'/login/')
 
 
-
-
 def user_confirm(request):
-    code = request.GET.get('code',None)
+    code = request.GET.get('code', None)
     message = ''
+
     try:
         confirm = models.ConfirmString.objects.get(code=code)
     except:
-        message = "无效的请求"
-        return render(request,'login/confirm.html',locals())
+        message = '无效的确认请求！'
+        return render(request, 'login/confirm.html', locals())
 
     c_time = confirm.c_time
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow().replace(tzinfo=utc)
     if now > c_time + datetime.timedelta(settings.CONFIRM_DAYS):
         confirm.user.delete()
-        message = '您的邮件注册信息已过期！请重新注测！'
+        message = '您的邮件已经过期！请重新注册！'
         return render(request, 'login/confirm.html', locals())
     else:
         confirm.user.has_confirmed = True
